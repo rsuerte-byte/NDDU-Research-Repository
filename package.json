@@ -1,0 +1,16 @@
+{
+  "name": "nddu-research-repository",
+  "version": "1.0.0",
+  "description": "Secure institutional login for the NDDU research repository",
+  "main": "server.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.6",
+    "express": "^4.21.2"
+  }
+}

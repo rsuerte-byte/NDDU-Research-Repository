@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Repository Access | NDDU Research Repository</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- AOS - Animate On Scroll -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        ndduGreen: '#166534',
+                        ndduAccent: '#C29B40',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="min-h-screen bg-emerald-900 flex items-center justify-center px-4 py-10" style="background-image: url('Background.png'); background-size: cover; background-position: center; background-repeat: no-repeat;">
+    <div class="w-full max-w-md bg-white rounded-xl shadow-2xl border border-emerald-200 p-8" data-aos="zoom-in" data-aos-duration="700">
+        <div class="text-center" data-aos="fade-down" data-aos-delay="200">
+            <img src="Logo.png" alt="NDDU Logo" class="w-20 h-20 object-contain mx-auto mb-4" data-aos="flip-up" data-aos-delay="400">
+            <h1 class="text-2xl font-serif font-bold text-slate-800" data-aos="fade-up" data-aos-delay="300">Repository Access</h1>
+            <p class="text-sm text-slate-600 mt-2" data-aos="fade-up" data-aos-delay="400">Sign in with a verified Google account. NDDU email addresses are accepted; other addresses require advance approval by the repository administrator.</p>
+        </div>
+
+        <div class="mt-6 space-y-4">
+            <div id="googleSignInDiv" class="flex justify-center" data-aos="fade-up" data-aos-delay="500"></div>
+            <p id="loginMessage" class="text-sm text-red-600 hidden" data-aos="shake" data-aos-duration="400"></p>
+            <p class="text-xs text-slate-500 text-center" data-aos="fade-in" data-aos-delay="800">If you don't have an NDDU email, ask the repository administrator to approve your verified Google email. The word “nddu” in an address does not verify affiliation.</p>
+        </div>
+    </div>
+
+    <script src="auth.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script>
+        const loginMessage = document.getElementById('loginMessage');
+
+        function showLoginError(message) {
+            loginMessage.textContent = message;
+            loginMessage.classList.remove('hidden');
+        }
+
+        function handleGoogleCredentialResponse(response) {
+            loginMessage.classList.add('hidden');
+
+            fetch('/api/google-login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ credential: response.credential })
+            })
+                .then(async (res) => {
+                    const data = await res.json();
+                    if (!res.ok || !data?.success) {
+                        showLoginError(data?.message || 'Google sign-in failed.');
+                        return;
+                    }
+
+                    window.location.href = 'index.html';
+                })
+                .catch(() => {
+                    showLoginError('Unable to reach the authentication server.');
+                });
+        }
+
+        async function initializeGoogleSignIn() {
+            let config;
+            try {
+                const response = await fetch('/api/auth-config');
+                config = await response.json();
+                if (!response.ok) throw new Error('Google sign-in is not configured.');
+            } catch (error) {
+                showLoginError('Google Client ID is not configured. Please contact the administrator.');
+                return;
+            }
+
+            if (!config.clientId) {
+                showLoginError('Google Client ID is not configured. Please contact the administrator.');
+                return;
+            }
+
+            for (let attempt = 0; attempt < 20; attempt += 1) {
+                if (window.google && window.google.accounts && window.google.accounts.id) {
+                    window.google.accounts.id.initialize({
+                        client_id: config.clientId,
+                        callback: handleGoogleCredentialResponse
+                    });
+                    window.google.accounts.id.renderButton(document.getElementById('googleSignInDiv'), {
+                        theme: 'outline',
+                        size: 'large',
+                        width: '100%'
+                    });
+                    return;
+                }
+                await new Promise((resolve) => setTimeout(resolve, 100));
+            }
+
+            showLoginError('Google sign-in could not be loaded. Please refresh and try again.');
+        }
+
+        window.addEventListener('load', initializeGoogleSignIn);
+
+        // Initialize AOS - Animate On Scroll
+        AOS.init({
+            duration: 600,
+            easing: 'ease-in-out-quad',
+            once: true,
+            offset: 100
+        });
+    </script>
+</body>
+</html>
